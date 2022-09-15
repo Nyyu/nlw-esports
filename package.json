@@ -1,0 +1,10 @@
+{
+  "name": "nlw-esports",
+  "version": "1.0.0",
+  "main": "app.js",
+  "license": "MIT",
+  "scripts": {
+    "server": "tsnd ./back-end/src/index.ts",
+    "client": "vite --prefix ./front-end"
+  }
+}
