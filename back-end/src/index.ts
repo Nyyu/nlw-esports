@@ -1,10 +1,13 @@
 import express from "express"
 import { PrismaClient } from "@prisma/client"
+import { minutesToHourString } from "./utils/minutesToHourString"
+import { hourStringToMinutes } from "./utils/hourStringToMinutes"
 
 const app = express()
 const prisma = new PrismaClient()
 
 app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
 
 app.route("/").get(function (req, res) {
   res.status(200).json([])
@@ -38,34 +41,57 @@ app
     res.status(201).json([])
   })
 
-app.route("/games/:id/ads").get(async function (req, res) {
-  const gameId = req.params.id
+app
+  .route("/games/:id/ads")
+  .get(async function (req, res) {
+    const gameId = req.params.id
 
-  const ads = await prisma.ad.findMany({
-    select: {
-      id: true,
-      name: true,
-      weekDays: true,
-      useVoiceChannel: true,
-      yearsPlaying: true,
-      hourStart: true,
-      HourEnd: true,
-    },
-    where: {
-      gameId,
-    },
-    orderBy: {
-      createdAt: "asc",
-    },
+    const ads = await prisma.ad.findMany({
+      select: {
+        id: true,
+        name: true,
+        weekDays: true,
+        useVoiceChannel: true,
+        yearsPlaying: true,
+        hourStart: true,
+        HourEnd: true,
+      },
+      where: {
+        gameId,
+      },
+      orderBy: {
+        createdAt: "asc",
+      },
+    })
+
+    res.status(200).json(
+      ads.map((ad) => ({
+        ...ad,
+        weekDays: ad.weekDays.split(","),
+        hourStart: minutesToHourString(ad.hourStart),
+        HourEnd: minutesToHourString(ad.HourEnd),
+      }))
+    )
   })
+  .post(async (req, res) => {
+    const gameId = req.params.id
+    const body: any = req.body
 
-  res.status(200).json(
-    ads.map((ad) => ({
-      ...ad,
-      weekDays: ad.weekDays.split(","),
-    }))
-  )
-})
+    const ad = await prisma.ad.create({
+      data: {
+        gameId,
+        name: body.name,
+        useVoiceChannel: body.useVoiceChannel,
+        yearsPlaying: body.yearsPlaying,
+        discord: body.discord,
+        weekDays: body.weekDays.join(","),
+        hourStart: hourStringToMinutes(body.hourStart),
+        HourEnd: hourStringToMinutes(body.HourEnd),
+      },
+    })
+
+    return res.json(ad)
+  })
 
 app
   .route("/ads/:id/discord")
